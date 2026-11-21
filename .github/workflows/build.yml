@@ -1,25 +1,25 @@
 name: Build Chord Switch Trainer APK
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-  workflow_dispatch:
-
-permissions:
-  contents: read
+      - master
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Check out repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -30,45 +30,55 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Prepare web app
-        run: npm run build
+      - name: Prepare web assets
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
 
-      - name: Create Android project
+      - name: Add Android platform
         run: npx cap add android
 
-      - name: Generate Android launcher icons
-        run: npx capacitor-assets generate --android
-
-      - name: Keep screen awake during practice
+      - name: Prepare Capacitor icon source
         run: |
-          cat > android/app/src/main/java/com/kapitol/chordswitch/MainActivity.java <<'JAVA'
-          package com.kapitol.chordswitch;
+          mkdir -p assets
+          test -f icon.png
+          cp icon.png assets/icon.png
+
+      - name: Generate Android icons
+        run: npx capacitor-assets generate --android --assetPath assets
+
+      - name: Keep screen awake
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/src/main/java/com/kapitol/chordswitch/MainActivity.java")
+          p.parent.mkdir(parents=True, exist_ok=True)
+          p.write_text("""package com.kapitol.chordswitch;
 
           import android.os.Bundle;
           import android.view.WindowManager;
           import com.getcapacitor.BridgeActivity;
 
           public class MainActivity extends BridgeActivity {
-            @Override
-            public void onCreate(Bundle savedInstanceState) {
-              super.onCreate(savedInstanceState);
-              getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            }
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+              }
           }
-          JAVA
+          """)
+          PY
 
-      - name: Sync app files and native assets
+      - name: Sync Capacitor project
         run: npx cap sync android
 
       - name: Build debug APK
         working-directory: android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: chord-switch-strum-trainer-apk
+          name: chord-switch-trainer-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
