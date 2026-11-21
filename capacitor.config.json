@@ -1,0 +1,6 @@
+{
+  "appId": "com.kapitol.chordswitch",
+  "appName": "Chord Switch Trainer",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
