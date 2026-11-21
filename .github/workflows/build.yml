@@ -1,14 +1,9 @@
-GITHUB ACTIONS WORKFLOW CONTENT
-When creating the workflow in GitHub, use the standard path:
-.github/workflows/build.yml
-Copy everything below this divider into the workflow editor and commit the file.
-============================================================
-
 name: Build Chord Switch Trainer APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -25,7 +20,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -78,4 +72,3 @@ jobs:
           name: chord-switch-strum-trainer-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          
